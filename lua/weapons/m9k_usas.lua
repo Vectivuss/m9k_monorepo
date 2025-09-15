@@ -111,9 +111,10 @@ end
 function SWEP:ReloadFinish()
     local owner = self:GetOwner()
 
-    self:DefaultReload( ACT_SHOTGUN_RELOAD_FINISH )
+    local time = self:PlayAnimation( ACT_SHOTGUN_RELOAD_FINISH )
+
     if not owner:IsNPC() then
-        self.ResetSights = CurTime() + owner:GetViewModel():SequenceDuration()
+        self.ResetSights = CurTime() + time
     end
 
     if not SERVER then return end
@@ -123,11 +124,12 @@ function SWEP:ReloadFinish()
         self:SetIronsights( false )
     end
 
-    local waitdammit = owner:GetViewModel():SequenceDuration()
+    local waitdammit = time
     timer.Simple( waitdammit + .1, function()
         if not IsValid( self ) then return end
         if not IsValid( owner ) then return end
         self:SetReloading( false )
+        self:HandleReloading( )
         if owner:KeyDown( IN_ATTACK2 ) and self.Scoped == false then
             owner:SetFOV( self.Secondary.IronFOV, 0.3 )
             self.IronSightsPos = self.SightsPos

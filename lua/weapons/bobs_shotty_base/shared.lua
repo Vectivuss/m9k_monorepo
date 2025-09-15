@@ -136,7 +136,9 @@ function SWEP:Reload()
         self:SendWeaponAnim( ACT_SHOTGUN_RELOAD_START ) -- sending start reload anim
         owner:SetAnimation( PLAYER_RELOAD )
 
-        owner.NextReload = CurTime() + 1
+        local speed = self.ReloadSpeed or 1
+
+        owner.NextReload = CurTime() + (1 / speed)
 
         if (SERVER) then
             owner:SetFOV( 0, 0.15 )
@@ -145,7 +147,7 @@ function SWEP:Reload()
 
         if SERVER and owner:Alive() then
             local timerName = "ShotgunReload_" .. owner:UniqueID()
-            timer.Create( timerName, self.ShellTime + .05, shellz, function()
+            timer.Create( timerName, (self.ShellTime / speed) + .05, shellz, function()
                 if not IsValid( self ) then return end
                 if IsValid( owner ) and IsValid( self ) then
                     if owner:Alive() then

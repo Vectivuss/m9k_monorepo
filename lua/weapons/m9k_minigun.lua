@@ -57,9 +57,10 @@ SWEP.RunSightsAng           = Vector( 55.082, 0, 0 )
 function SWEP:Reload()
     local owner = self:GetOwner()
 
-    self:DefaultReload( ACT_VM_RELOAD )
+    local time = self:PlayAnimation( ACT_VM_RELOAD )
+
     if not owner:IsNPC() then
-        self.ResetSights = CurTime() + owner:GetViewModel():SequenceDuration()
+        self.ResetSights = CurTime() + time
     end
     if (self:Clip1() < self.Primary.ClipSize) and not owner:IsNPC() then
         -- When the current clip < full clip and the rest of your ammo > 0, then
@@ -68,7 +69,7 @@ function SWEP:Reload()
         self:SetIronsights( false )
         self:SetReloading( true )
     end
-    local waitdammit = (owner:GetViewModel():SequenceDuration())
+    local waitdammit = time
     self:MiniGunIdle( waitdammit )
 end
 
@@ -76,6 +77,7 @@ function SWEP:MiniGunIdle( wait )
     timer.Simple( wait + .05, function()
         if not IsValid( self ) then return end
         self:SetReloading( false )
+        self:HandleReloading( )
         if SERVER then
             self:SendWeaponAnim( ACT_VM_IDLE )
         else

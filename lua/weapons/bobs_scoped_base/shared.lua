@@ -197,6 +197,49 @@ function SWEP:BoltBack()
     end
 end
 
+function SWEP:HandleReloading()
+    local owner = entity_GetOwner(self)
+
+    local id = self:GetPrimaryAmmoType()
+    local start = self:Clip1()
+    local reserves = owner:GetAmmoCount(id)
+
+    local final = math.min(start + reserves, self:GetMaxClip1())
+
+    self:SetClip1(final)
+
+    owner:SetAmmo(reserves - (final - start), id)
+end
+
+function SWEP:PlayAnimation(Sequence)
+    local viewmodel = entity_GetOwner(self):GetViewModel()
+    local speed = self.ReloadSpeed or 1
+
+    if speed == 1 then
+        self:DefaultReload(Sequence)
+        return viewmodel:SequenceDuration()
+    end
+
+    self:SendWeaponAnim(ACT_RELOAD)
+
+    viewmodel:ResetSequenceInfo()
+    viewmodel:SendViewModelMatchingSequence(viewmodel:SelectWeightedSequence(Sequence))
+    viewmodel:SetCycle(0)
+    viewmodel:SetPlaybackRate(speed)
+
+    local time, duration = CurTime(), viewmodel:SequenceDuration() / speed
+
+    self:SetNextPrimaryFire(time + duration + 0.1)
+    self:SetNextSecondaryFire(time + duration + 0.1)
+    self:NextThink(time + duration)
+
+    if CLIENT then
+        self:SetNextClientThink(time + duration)
+    end
+
+    return duration
+end
+
 function SWEP:Reload()
     if self:Clip1() >= self.Primary.ClipSize then return end
 
@@ -206,10 +249,11 @@ function SWEP:Reload()
     if owner:GetAmmoCount( self:GetPrimaryAmmoType() ) <= 0 then return end
     if owner:KeyDown( IN_USE ) then return end
     if self:GetBoltback() then return end
+    if self:GetReloading() then return end 
 
-    self:DefaultReload( ACT_VM_RELOAD )
+    local time = self:PlayAnimation(ACT_VM_RELOAD)
     if not owner:IsNPC() then
-        self.Idle = CurTime() + owner:GetViewModel():SequenceDuration()
+        self.Idle = CurTime() + time
     end
 
     if ( self:Clip1() < self.Primary.ClipSize ) and not owner:IsNPC() then
@@ -227,12 +271,14 @@ function SWEP:Reload()
     if owner:GetViewModel() == nil then
         waitdammit = 3
     else
-        waitdammit = owner:GetViewModel():SequenceDuration()
+        waitdammit = time
     end
     timer.Simple( waitdammit + .1, function()
         if not IsValid( self ) or not IsValid( owner ) then return end
 
         self:SetReloading( false )
+        self:HandleReloading()
+
         if owner:KeyDown( IN_ATTACK2 ) then
             owner:SetFOV( 75 / self.Secondary.ScopeZoom, 0.15 )
             self.IronSightsPos = self.SightsPos -- Bring it up

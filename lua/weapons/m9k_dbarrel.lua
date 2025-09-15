@@ -190,8 +190,9 @@ function SWEP:Reload()
         end
 
         if SERVER and owner:Alive() then
+            local speed = self.ReloadSpeed or 1
             local timerName = "ShotgunReload_" .. owner:UniqueID()
-            timer.Create( timerName, self.ShellTime + .05, shellz, function()
+            timer.Create( timerName, (self.ShellTime / speed) + .05, shellz, function()
                 if not IsValid( self ) or not IsValid( owner ) then return end
                 if owner:Alive() then
                     self:InsertShell()
